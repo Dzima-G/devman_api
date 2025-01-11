@@ -3,7 +3,6 @@ import requests
 import sys
 import time
 import logging
-import asyncio
 import telegram
 import os
 
@@ -16,32 +15,32 @@ def get_long_polling_response(url, devman_token, timestamp):
         payload = {'timestamp': timestamp}
         response = requests.get(url, headers=headers, params=payload)
         response.raise_for_status()
-        if response.json().get('status') in 'timeout':
-            timestamp = response.json().get('timestamp_to_request')
-        elif response.json().get('status') in 'found':
-            timestamp = response.json().get('last_attempt_timestamp')
-            data = response.json().get('new_attempts')[0]
-            lesson_title = data.get('lesson_title')
-            verification_status = data.get('is_negative')
-            lesson_url = data.get('lesson_url')
-            asyncio.run(send_message(lesson_title, verification_status, lesson_url))
+        response_json = response.json()
+        if response_json.get('status') in 'timeout':
+            timestamp = response_json.get('timestamp_to_request')
+        elif response_json.get('status') in 'found':
+            timestamp = response_json.get('last_attempt_timestamp')
+            new_attempts_json = response_json.get('new_attempts')[0]
+            lesson_title = new_attempts_json.get('lesson_title')
+            verification_status = new_attempts_json.get('is_negative')
+            lesson_url = new_attempts_json.get('lesson_url')
+            send_message(lesson_title, verification_status, lesson_url)
 
 
-async def send_message(lesson_title, verification_status, lesson_url):
-    bot = telegram.Bot(telegram_token)
-    async with bot:
-        if verification_status:
-            await bot.send_message(
-                text=f'У вас проверили работу «{lesson_title}»!\n\n'
-                     f'К сожалению, в работе нашлись ошибки.'
-                     f'\nСсылка на работу: {lesson_url}',
-                chat_id=telegram_chat_id)
-        else:
-            await bot.send_message(
-                text=f'У вас проверили работу «{lesson_title}»!\n\n'
-                     f'Преподавателю все понравилось, можно приступать к следующему уроку.\n'
-                     f'Ссылка на работу: {lesson_url}',
-                chat_id=telegram_chat_id)
+def send_message(lesson_title, verification_status, lesson_url):
+    bot = telegram.Bot(token=telegram_token)
+    if verification_status:
+        bot.send_message(
+            text=f'У вас проверили работу «{lesson_title}»!\n\n'
+                 f'К сожалению, в работе нашлись ошибки.'
+                 f'\nСсылка на работу: {lesson_url}',
+            chat_id=telegram_chat_id)
+    else:
+        bot.send_message(
+            text=f'У вас проверили работу «{lesson_title}»!\n\n'
+                 f'Преподавателю все понравилось, можно приступать к следующему уроку.\n'
+                 f'Ссылка на работу: {lesson_url}',
+            chat_id=telegram_chat_id)
 
 
 if __name__ == "__main__":
@@ -58,7 +57,6 @@ if __name__ == "__main__":
         try:
             get_long_polling_response(url, devman_api_token, now_timestamp)
         except requests.exceptions.ReadTimeout:
-            logger.warning(f'Server timed out! Reload!')
             continue
         except requests.exceptions.HTTPError as error:
             print(error, file=sys.stderr)
