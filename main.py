@@ -6,13 +6,18 @@ import logging
 import telegram
 import os
 
+
 logger = logging.getLogger(__name__)
 
 
 def get_long_polling_response(url, devman_token, timestamp):
-    headers = {'Authorization': f'Token {devman_token}'}
+    headers = {
+        'Authorization': f'Token {devman_token}',
+    }
     while True:
-        payload = {'timestamp': timestamp}
+        payload = {
+            'timestamp': timestamp,
+        }
         response = requests.get(url, headers=headers, params=payload)
         response.raise_for_status()
         response = response.json()
@@ -38,7 +43,8 @@ def send_message(lesson_title, verification_status, lesson_url):
     else:
         bot.send_message(
             text=f'У вас проверили работу «{lesson_title}»!\n\n'
-                 f'Преподавателю все понравилось, можно приступать к следующему уроку.\n'
+                 f'Преподавателю все понравилось, можно приступать '
+                 f'к следующему уроку.\n'
                  f'Ссылка на работу: {lesson_url}',
             chat_id=telegram_chat_id)
 
@@ -61,6 +67,7 @@ if __name__ == "__main__":
         except requests.exceptions.HTTPError as error:
             print(error, file=sys.stderr)
         except requests.exceptions.ConnectionError:
-            logger.warning(f'Не удается подключиться к серверу! Повторное подключение через 10 секунд.')
+            logger.warning('Не удается подключиться к серверу!'
+                           ' Повторное подключение через 10 секунд.')
             time.sleep(10)
             continue
