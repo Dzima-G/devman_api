@@ -15,15 +15,15 @@ def get_long_polling_response(url, devman_token, timestamp):
         payload = {'timestamp': timestamp}
         response = requests.get(url, headers=headers, params=payload)
         response.raise_for_status()
-        response_json = response.json()
-        if response_json.get('status') in 'timeout':
-            timestamp = response_json.get('timestamp_to_request')
-        elif response_json.get('status') in 'found':
-            timestamp = response_json.get('last_attempt_timestamp')
-            new_attempts_json = response_json.get('new_attempts')[0]
-            lesson_title = new_attempts_json.get('lesson_title')
-            verification_status = new_attempts_json.get('is_negative')
-            lesson_url = new_attempts_json.get('lesson_url')
+        response = response.json()
+        if response.get('status') in 'timeout':
+            timestamp = response.get('timestamp_to_request')
+        elif response.get('status') in 'found':
+            timestamp = response.get('last_attempt_timestamp')
+            new_attempts = response.get('new_attempts')[0]
+            lesson_title = new_attempts.get('lesson_title')
+            verification_status = new_attempts.get('is_negative')
+            lesson_url = new_attempts.get('lesson_url')
             send_message(lesson_title, verification_status, lesson_url)
 
 
