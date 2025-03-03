@@ -1,16 +1,26 @@
-from dotenv import load_dotenv
-import requests
+import logging
+import os
 import sys
 import time
-import logging
+
+import requests
 import telegram
-import os
+from dotenv import load_dotenv
 
 
-logger = logging.getLogger(__name__)
+class TelegramLogsHandler(logging.Handler):
+
+    def __init__(self, tg_bot, chat_id):
+        super().__init__()
+        self.chat_id = chat_id
+        self.tg_bot = tg_bot
+
+    def emit(self, record):
+        log_entry = self.format(record)
+        self.tg_bot.send_message(chat_id=self.chat_id, text=log_entry)
 
 
-def get_long_polling_response(url, devman_token, timestamp):
+def get_long_polling_response(url, devman_token, timestamp, tg_bot):
     headers = {
         'Authorization': f'Token {devman_token}',
     }
@@ -29,19 +39,18 @@ def get_long_polling_response(url, devman_token, timestamp):
             lesson_title = new_attempts.get('lesson_title')
             verification_status = new_attempts.get('is_negative')
             lesson_url = new_attempts.get('lesson_url')
-            send_message(lesson_title, verification_status, lesson_url)
+            send_message(lesson_title, verification_status, lesson_url, tg_bot)
 
 
-def send_message(lesson_title, verification_status, lesson_url):
-    bot = telegram.Bot(token=telegram_token)
+def send_message(lesson_title, verification_status, lesson_url, tg_bot):
     if verification_status:
-        bot.send_message(
+        tg_bot.send_message(
             text=f'У вас проверили работу «{lesson_title}»!\n\n'
                  f'К сожалению, в работе нашлись ошибки.'
                  f'\nСсылка на работу: {lesson_url}',
             chat_id=telegram_chat_id)
     else:
-        bot.send_message(
+        tg_bot.send_message(
             text=f'У вас проверили работу «{lesson_title}»!\n\n'
                  f'Преподавателю все понравилось, можно приступать '
                  f'к следующему уроку.\n'
@@ -56,17 +65,32 @@ if __name__ == "__main__":
     telegram_token = os.environ['TELEGRAM_TOKEN']
     telegram_chat_id = os.environ['TG_CHAT_ID']
 
+    telegram_bot = telegram.Bot(token=telegram_token)
+
+    logger = logging.getLogger('Logger')
+    logging.basicConfig(level=logging.INFO)
+    logger.addHandler(TelegramLogsHandler(telegram_bot, telegram_chat_id))
+
     url = 'https://dvmn.org/api/long_polling/'
     now_timestamp = time.time()
 
     while True:
         try:
-            get_long_polling_response(url, devman_api_token, now_timestamp)
+            logger.info('Бот запущен')
+            get_long_polling_response(
+                url,
+                devman_api_token,
+                now_timestamp,
+                telegram_bot)
         except requests.exceptions.ReadTimeout:
+            logger.warning('Ожидание ответа от сервера истекло,'
+                           'повторный запрос отправлен!')
             continue
         except requests.exceptions.HTTPError as error:
+            logger.error('Бот упал с ошибкой')
             print(error, file=sys.stderr)
         except requests.exceptions.ConnectionError:
+
             logger.warning('Не удается подключиться к серверу!'
                            ' Повторное подключение через 10 секунд.')
             time.sleep(10)
