@@ -87,7 +87,7 @@ if __name__ == "__main__":
                            'повторный запрос отправлен!')
             continue
         except requests.exceptions.HTTPError as error:
-            logger.error('Бот упал с ошибкой')
+            logger.error('Бот упал с ошибкой:')
             print(error, file=sys.stderr)
         except requests.exceptions.ConnectionError:
 
@@ -95,3 +95,7 @@ if __name__ == "__main__":
                            ' Повторное подключение через 10 секунд.')
             time.sleep(10)
             continue
+        except Exception as err:
+            logger.error('Бот упал с ошибкой:')
+            logger.exception(err)
+            break
