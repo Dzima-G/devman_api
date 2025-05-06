@@ -14,7 +14,8 @@
 Обязательные переменные окружения:
 - `DEVMAN_API_TOKEN` - выглядит например: `8c1000452930e000c0000ee82d5e4as76ff717a6h`. См. документацию https://dvmn.org/api/docs/
 - `TELEGRAM_TOKEN` - токен выглядит например: `6000000001:ADEeVTKrhmLSBouDAjhT0r9tBG-AW5VU9YG`. См. документацию https://core.telegram.org/bots/faq#how-do-i-create-a-bot
-- `TELEGRAM_CHAT_ID` - выглядит например: `1000001234567` Напишите в Telegram специальному боту: https://telegram.me/userinfobot
+- `TELEGRAM_CHAT_ID` - (бот для уведомлений) выглядит например: `1000001234567` Напишите в Telegram специальному боту: https://telegram.me/userinfobot
+- `ERROR_TELEGRAM_TOKEN` - (бот для отправки ошибок) токен выглядит например: `6000000001:ADEeVTKrhmLSBouDAjhT0r9tBG-AW5VU9YG`. См. документацию https://core.telegram.org/bots/faq#how-do-i-create-a-bot
 
 Python3 должен быть уже установлен. 
 Затем используйте `pip` (или `pip3`, есть конфликт с Python2) для установки зависимостей:
