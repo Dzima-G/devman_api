@@ -99,7 +99,7 @@ if __name__ == "__main__":
 
     while True:
         try:
-            get_long_polling_response(
+            now_timestamp = get_long_polling_response(
                 url,
                 devman_api_token,
                 now_timestamp,
