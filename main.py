@@ -10,19 +10,17 @@ from dotenv import load_dotenv
 class TelegramLogsHandler(logging.Handler):
     def __init__(self, error_telegram_token, telegram_chat_id):
         super().__init__()
-        self.tg_bot_token = error_telegram_token
         self.tg_chat_id = telegram_chat_id
         self.error_tg_bot = telegram.Bot(token=error_telegram_token)
 
     def emit(self, record):
         try:
             log_entry = self.format(record)
-            self.error_message(log_entry)
+            self.error_tg_bot.send_message(
+                text=log_entry, chat_id=self.tg_chat_id
+            )
         except Exception as e:
             print(f"TelegramLogsHandler error: {e}")
-
-    def error_message(self, message):
-        self.error_tg_bot.send_message(text=message, chat_id=self.tg_chat_id)
 
 
 def get_long_polling_response(
@@ -31,28 +29,29 @@ def get_long_polling_response(
     headers = {
         "Authorization": f"Token {devman_token}",
     }
-    while True:
-        payload = {
-            "timestamp": timestamp,
-        }
-        response = requests.get(url, headers=headers, params=payload)
-        response.raise_for_status()
-        response = response.json()
-        if response.get("status") == "timeout":
-            timestamp = response.get("timestamp_to_request")
-        elif response.get("status") == "found":
-            timestamp = response.get("last_attempt_timestamp")
-            new_attempts = response.get("new_attempts")[0]
-            lesson_title = new_attempts.get("lesson_title")
-            verification_status = new_attempts.get("is_negative")
-            lesson_url = new_attempts.get("lesson_url")
-            send_message(
-                lesson_title,
-                verification_status,
-                lesson_url,
-                tg_bot,
-                tg_chat_id,
-            )
+    payload = {
+        "timestamp": timestamp,
+    }
+    response = requests.get(url, headers=headers, params=payload)
+    response.raise_for_status()
+    response = response.json()
+
+    if response.get("status") == "timeout":
+        timestamp = response.get("timestamp_to_request")
+    elif response.get("status") == "found":
+        timestamp = response.get("last_attempt_timestamp")
+        new_attempts = response.get("new_attempts")[0]
+        lesson_title = new_attempts.get("lesson_title")
+        verification_status = new_attempts.get("is_negative")
+        lesson_url = new_attempts.get("lesson_url")
+        send_message(
+            lesson_title,
+            verification_status,
+            lesson_url,
+            tg_bot,
+            tg_chat_id,
+        )
+    return timestamp
 
 
 def send_message(
@@ -84,7 +83,6 @@ if __name__ == "__main__":
     telegram_chat_id = os.environ["TG_CHAT_ID"]
 
     telegram_bot = telegram.Bot(token=telegram_token)
-    error_telegram_bot = telegram.Bot(token=error_telegram_token)
 
     url = "https://dvmn.org/api/long_polling/"
 
@@ -111,11 +109,11 @@ if __name__ == "__main__":
         except requests.exceptions.ReadTimeout:
             logger.warning(
                 "Ожидание ответа от сервера истекло,"
-                "повторный запрос отправлен!"
+                "повторный запрос отправлен."
             )
             continue
         except requests.exceptions.HTTPError as err:
-            logger.error(f"Бот упал с ошибкой:{err}")
+            logger.error(f"Бот упал с ошибкой:\n {err}", exc_info=True)
         except requests.exceptions.ConnectionError:
             logger.warning(
                 "Не удается подключиться к серверу!"
@@ -123,6 +121,3 @@ if __name__ == "__main__":
             )
             time.sleep(10)
             continue
-        except Exception as err:
-            logger.error(f"Бот упал с ошибкой:{err}")
-            break
