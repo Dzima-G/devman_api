@@ -23,16 +23,16 @@ class TelegramLogsHandler(logging.Handler):
             print(f"TelegramLogsHandler error: {e}")
 
 
-def get_long_polling_response(
-    url, devman_token, timestamp, tg_bot, tg_chat_id
-):
+def get_long_polling_response(devman_token, timestamp, tg_bot, tg_chat_id):
     headers = {
         "Authorization": f"Token {devman_token}",
     }
     payload = {
         "timestamp": timestamp,
     }
-    response = requests.get(url, headers=headers, params=payload)
+    response = requests.get(
+        "https://dvmn.org/api/long_polling/", headers=headers, params=payload
+    )
     response.raise_for_status()
     response = response.json()
 
@@ -84,8 +84,6 @@ if __name__ == "__main__":
 
     telegram_bot = telegram.Bot(token=telegram_token)
 
-    url = "https://dvmn.org/api/long_polling/"
-
     logger = logging.getLogger("logger")
     logger.setLevel(logging.INFO)
     tg_handler = TelegramLogsHandler(error_telegram_token, telegram_chat_id)
@@ -100,17 +98,12 @@ if __name__ == "__main__":
     while True:
         try:
             now_timestamp = get_long_polling_response(
-                url,
                 devman_api_token,
                 now_timestamp,
                 telegram_bot,
                 telegram_chat_id,
             )
         except requests.exceptions.ReadTimeout:
-            logger.warning(
-                "Ожидание ответа от сервера истекло,"
-                "повторный запрос отправлен."
-            )
             continue
         except requests.exceptions.HTTPError as err:
             logger.error(f"Бот упал с ошибкой:\n {err}", exc_info=True)
